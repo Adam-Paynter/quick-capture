@@ -144,6 +144,13 @@ button{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:tran
 textarea.field{min-height:6rem;resize:vertical}
 .panel .form{margin-top:.7rem}
 .panel .ok-line{color:var(--ink)}
+.checkin-card{margin-top:.75rem;border-top:6px solid var(--primary)}
+.checkin-card p{color:var(--ink);font-weight:600}
+.linkbtn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.choice{display:flex;gap:.65rem;align-items:flex-start;padding:.55rem 0;min-height:44px}
+.choice input{width:22px;height:22px;margin-top:.1rem;flex:none;accent-color:var(--primary)}
+.choice strong{display:block}
+.choice-note{display:block;font-size:.875rem;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -151,6 +158,7 @@ textarea.field{min-height:6rem;resize:vertical}
   <header class="top">
     <h1>Quick Capture</h1>
     <button class="btn small" id="checkinBtn">Check in</button>
+    <a class="btn small linkbtn" id="checkinLink" target="_blank" rel="noopener" hidden>Check in</a>
   </header>
 
   <section class="capture" aria-label="New note">
@@ -173,6 +181,14 @@ textarea.field{min-height:6rem;resize:vertical}
     </div>
   </section>
   <div class="status"><span id="storage">Starting</span><span id="flash" role="status" aria-live="polite"></span></div>
+  <section class="panel checkin-card" id="checkinCard" hidden aria-label="Check in">
+    <p id="checkinMsg"></p>
+    <div class="row">
+      <a class="btn primary linkbtn" id="checkinOpen" target="_blank" rel="noopener">Open project</a>
+      <button class="btn" id="checkinShare">Share instead</button>
+      <button class="btn" id="checkinClose">Close</button>
+    </div>
+  </section>
 
   <h2 class="view-title" id="viewTitle">Open notes</h2>
   <div class="chips" id="filters" aria-label="Filter by bucket"></div>
@@ -223,7 +239,7 @@ const RULES = [
 
 const state = {view:'open', filter:'all', query:'', openId:null, editId:null, confirmId:null};
 let notes = {};
-let settings = {buckets: DEFAULT_BUCKETS.map(b => Object.assign({}, b)), autoSort:true, rev:0};
+let settings = {buckets: DEFAULT_BUCKETS.map(b => Object.assign({}, b)), autoSort:true, projectLink:'', checkin:'copy', rev:0};
 let secret = {apiKey:'', rev:0}, secretChecked = 0;
 let conn = null;
 let meta = {sha:null, etag:null, dirty:false, last:0, inboxEtag:null};
@@ -256,6 +272,8 @@ function applySettings(s){
     settings.buckets = clean;
   }
   if (typeof s.autoSort === 'boolean') settings.autoSort = s.autoSort;
+  if (typeof s.projectLink === 'string') settings.projectLink = s.projectLink;
+  if (['copy', 'code', 'project', 'share'].indexOf(s.checkin) !== -1) settings.checkin = s.checkin;
   settings.rev = Number(s.rev) || 0;
 }
 function load(){
@@ -325,7 +343,7 @@ function mergeRemote(data){
   else if (lrev > rrev) localWins = true;
   return {changed:changed, localWins:localWins};
 }
-function serialize(){ return JSON.stringify({v:1, notes:notes, settings:{buckets:settings.buckets, autoSort:settings.autoSort, rev:settings.rev || 0}}); }
+function serialize(){ return JSON.stringify({v:1, notes:notes, settings:{buckets:settings.buckets, autoSort:settings.autoSort, projectLink:settings.projectLink || '', checkin:settings.checkin, rev:settings.rev || 0}}); }
 /* The API key lives in its own file, secrets.json, so notes.json holds nothing but notes. */
 async function syncSecret(){
   const localNewer = (secret.rev || 0) > (meta.secretRemoteRev || 0);
@@ -573,6 +591,7 @@ function render(){
     if (badge) { badge.hidden = !counts[v]; badge.textContent = counts[v] ? String(counts[v]) : ''; }
   });
   $('#viewTitle').textContent = {open:'Open notes', playbooks:'Playbooks', done:'Done'}[state.view];
+  renderCheckinEntry();
 
   const filters = $('#filters'); filters.textContent = ''; filters.hidden = state.view !== 'open';
   if (state.view === 'open') {
@@ -690,6 +709,29 @@ function renderSettings(){
   const lt = el('textarea', 'field mono'); lt.id = 'linkText'; lt.hidden = true; lt.readOnly = true; lt.setAttribute('aria-label', 'Lock screen link'); lt.style.marginTop = '.6rem'; p0.appendChild(lt);
   body.appendChild(p0);
 
+  const pc = el('section', 'panel'); pc.appendChild(el('h3', '', 'Check-in'));
+  pc.appendChild(el('p', '', 'Choose what the Check in button does.'));
+  [['copy', 'Copy to clipboard', 'Copies your open notes as a plain list. Paste them wherever you like.'],
+   ['code', 'Claude Code session', 'Opens a new session with your notes repository attached, so Claude reads the notes itself.'],
+   ['project', 'Claude project', 'Copies your open notes and opens a project. You start a chat there and paste.'],
+   ['share', 'Share sheet', 'Hands your open notes to any app through the share sheet.']].forEach(o => {
+    const lab = el('label', 'choice'); const r = document.createElement('input'); r.type = 'radio'; r.name = 'ckmode'; r.value = o[0]; r.checked = settings.checkin === o[0];
+    const txt = el('span', ''); txt.appendChild(el('strong', '', o[1])); txt.appendChild(el('span', 'choice-note', o[2]));
+    lab.appendChild(r); lab.appendChild(txt); pc.appendChild(lab);
+  });
+  if (settings.checkin === 'code') {
+    const note = el('p', '', conn
+      ? 'Needs Claude Code on your plan, and your GitHub account connected to Claude with access to ' + conn.owner + '/' + conn.repo + '.'
+      : 'Connect sync above first. The session needs to know which repository holds your notes.');
+    note.style.marginTop = '.6rem'; pc.appendChild(note);
+  }
+  if (settings.checkin === 'project') {
+    pc.appendChild(field('projectLink', 'Claude project link', settings.projectLink, 'url', 'https://claude.ai/project/...'));
+    const rc = el('div', 'row'); rc.style.margin = '.75rem 0 .6rem'; rc.appendChild(actBtn('Save link', 'saveProject')); pc.appendChild(rc);
+    const pcs = el('p', '', settings.projectLink ? 'Link saved.' : 'Paste the project address from claude.ai. It starts with https://claude.ai/project/'); pcs.id = 'projectStatus'; pc.appendChild(pcs);
+  }
+  body.appendChild(pc);
+
   const p1 = el('section', 'panel'); p1.appendChild(el('h3', '', 'Smart sorting'));
   const sw = el('label', 'switch', 'Let Claude sort notes and read photos');
   const cb = document.createElement('input'); cb.type = 'checkbox'; cb.id = 'autoSort'; cb.checked = settings.autoSort; sw.appendChild(cb); p1.appendChild(sw);
@@ -744,9 +786,11 @@ function importLines(text){
   });
   return count;
 }
-function checkinText(){
+function checkinText(plain){
   const open = visible().filter(n => n.kind === 'note' && n.status !== 'done');
-  const lines = ['Daily check-in. Here are my open Quick Capture notes. Work through them with me: each one should end as added to my task list, something to bring up with someone, or completed.', ''];
+  const lines = plain
+    ? ['Open Quick Capture notes, ' + new Date().toLocaleDateString(undefined, {month:'short', day:'numeric'}), '']
+    : ['Daily check-in. Here are my open Quick Capture notes. Work through them with me: each one should end as added to my task list, something to bring up with someone, or completed.', ''];
   settings.buckets.forEach(b => {
     const it = open.filter(n => bucketOf(n).id === b.id); if (!it.length) return;
     lines.push(b.label + ':'); it.forEach(n => lines.push('- ' + n.text.replace(/\n/g, ' / ') + (n.photo ? ' [has photo]' : ''))); lines.push('');
@@ -757,9 +801,45 @@ async function copyText(text, fallbackId){
   try { await navigator.clipboard.writeText(text); return true; }
   catch(e){ if (fallbackId) { const t = $(fallbackId); if (t) { t.hidden = false; t.value = text; t.focus(); t.select(); } } return false; }
 }
+function codeLink(){
+  const prompt = 'Daily check-in for my Quick Capture notes.\n\n' +
+    'Read notes.json in this repository. Do not open secrets.json. Do not change, commit, or push any files.\n\n' +
+    'In notes.json, "notes" is a map of id to note. List the notes where kind is "note", status is "open", and deleted is not true, grouped by bucket. ' +
+    'Bucket names are in settings.buckets: match each note\'s bucket to a bucket id, and treat unknown buckets as Misc. ' +
+    'A note with a photo value has its image at photos/<id>.jpg. Ignore playbook entries unless I ask about them.\n\n' +
+    'Then work through the open notes with me one at a time. Each note ends one of three ways: added to my task list, something to bring up with a specific person (draft the message for me), or completed here. ' +
+    'Keep it brisk. At the end, list which notes I can mark done in the app.';
+  return 'https://claude.ai/code/new?q=' + encodeURIComponent(prompt) + '&repo=' + encodeURIComponent(conn.owner + '/' + conn.repo);
+}
+function renderCheckinEntry(){
+  const code = settings.checkin === 'code' && !!conn;
+  const a = $('#checkinLink'); a.hidden = !code; $('#checkinBtn').hidden = code;
+  if (code) a.href = codeLink(); else a.removeAttribute('href');
+}
+function closeCheckin(){ $('#checkinCard').hidden = true; }
+async function shareCheckin(){
+  const c = checkinText();
+  if (navigator.share) { try { await navigator.share({text:c.text}); closeCheckin(); return; } catch(e){ if (e && e.name === 'AbortError') return; } }
+  if (await copyText(c.text)) say('Copied. Paste it into a chat with Claude.'); else say('Could not share. Use Export in Settings.');
+}
 async function checkin(){
   const c = checkinText();
   if (!c.count) { say('No open notes to check in.'); return; }
+  if (settings.checkin === 'copy') {
+    const p = checkinText(true);
+    if (await copyText(p.text)) say(p.count + (p.count === 1 ? ' open note copied.' : ' open notes copied.'));
+    else say('Could not copy. Use Export in Settings.');
+    return;
+  }
+  if (settings.checkin === 'project' && settings.projectLink) {
+    const ok = await copyText(c.text);
+    $('#checkinMsg').textContent = ok
+      ? c.count + (c.count === 1 ? ' open note copied.' : ' open notes copied.') + ' Open the project, start a new chat, and paste.'
+      : 'The notes could not be copied automatically. Use Share instead.';
+    const a = $('#checkinOpen'); a.href = settings.projectLink; a.hidden = !ok;
+    const card = $('#checkinCard'); card.hidden = false; card.scrollIntoView({block:'nearest'});
+    return;
+  }
   if (navigator.share) { try { await navigator.share({text:c.text}); return; } catch(e){ if (e && e.name === 'AbortError') return; } }
   if (await copyText(c.text)) say('Copied. Paste it into a chat with Claude.'); else say('Could not share. Use Export in Settings.');
 }
@@ -770,6 +850,9 @@ box.addEventListener('input', autosize);
 box.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); capture(); } });
 $('#captureBtn').addEventListener('click', capture);
 $('#checkinBtn').addEventListener('click', checkin);
+$('#checkinShare').addEventListener('click', shareCheckin);
+$('#checkinClose').addEventListener('click', closeCheckin);
+$('#checkinOpen').addEventListener('click', () => { setTimeout(closeCheckin, 400); });
 wrapToggle.addEventListener('change', () => { wrapFields.hidden = !wrapToggle.checked; if (wrapToggle.checked) eventInput.focus(); });
 $('#search').addEventListener('input', e => { state.query = e.target.value; render(); });
 document.querySelector('.tabbar').addEventListener('click', e => {
@@ -810,6 +893,11 @@ $('#sheetBody').addEventListener('click', async e => {
   }
   else if (act === 'disconnect') { conn = null; try { localStorage.removeItem(K.conn); } catch(err){} setSync('none'); renderSettings(); }
   else if (act === 'copyLink') { const ok = await copyText(setupLink(), '#linkText'); if (ok) { $('#connStatus').textContent = 'Lock screen link copied.'; } }
+  else if (act === 'saveProject') {
+    const v = $('#projectLink').value.trim();
+    if (v && !/^https:\/\/claude\.ai\/project\/[A-Za-z0-9-]+\/?$/.test(v)) { $('#projectStatus').textContent = 'That does not look like a project link. It should start with https://claude.ai/project/'; return; }
+    settings.projectLink = v; changeSettings(); renderSettings();
+  }
   else if (act === 'saveKey') { secret = {apiKey:$('#apiKey').value.trim(), rev:Date.now()}; lsSet(K.secret, secret); aiOff = false; secretChecked = 0; scheduleSync(300); renderSettings(); }
   else if (act === 'export') { const t = $('#ioText'); t.value = exportText(); t.focus(); t.select(); copyText(t.value); }
   else if (act === 'import') { const t = $('#ioText'); const n = importLines(t.value); t.value = ''; t.placeholder = n ? n + ' notes imported.' : 'Nothing to import. Paste one note per line.'; render(); }
@@ -823,7 +911,10 @@ $('#sheetBody').addEventListener('click', async e => {
     changeSettings(); renderSettings();
   }
 });
-$('#sheetBody').addEventListener('change', e => { if (e.target && e.target.id === 'autoSort') { settings.autoSort = e.target.checked; changeSettings(); } });
+$('#sheetBody').addEventListener('change', e => {
+  if (e.target && e.target.id === 'autoSort') { settings.autoSort = e.target.checked; changeSettings(); }
+  if (e.target && e.target.name === 'ckmode') { settings.checkin = e.target.value; changeSettings(); renderSettings(); renderCheckinEntry(); }
+});
 document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
 window.addEventListener('online', () => { sync(); });
 setInterval(() => { if (!document.hidden) sync(); }, 60000);
