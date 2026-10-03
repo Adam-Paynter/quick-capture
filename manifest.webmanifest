@@ -1,0 +1,15 @@
+{
+  "name": "Quick Capture",
+  "short_name": "Capture",
+  "description": "Capture a thought in one tap and sort it later.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EEF3FA",
+  "theme_color": "#1B56C7",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

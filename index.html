@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quick Capture</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Capture">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#EEF3FA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0C1626" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<link rel="icon" href="./icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  --bg:#EEF3FA; --surface:#FFFFFF; --field:#FFFFFF; --ink:#0E1E36; --muted:#465A78; --line:#C7D5E8;
+  --primary:#1B56C7; --primary-ink:#FFFFFF; --danger:#B3261E; --ring:#0B3EA8;
+  --chip-l:92%; --chip-tl:24%; --bar-l:46%;
+  --display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body:"Figtree", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0C1626; --surface:#142238; --field:#0F1C30; --ink:#E9F0FB; --muted:#A8B8D2; --line:#2B3F5F;
+    --primary:#8AB6FF; --primary-ink:#071630; --danger:#FF9A90; --ring:#B9D4FF;
+    --chip-l:24%; --chip-tl:88%; --bar-l:62%;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0C1626; --surface:#142238; --field:#0F1C30; --ink:#E9F0FB; --muted:#A8B8D2; --line:#2B3F5F;
+  --primary:#8AB6FF; --primary-ink:#071630; --danger:#FF9A90; --ring:#B9D4FF;
+  --chip-l:24%; --chip-tl:88%; --bar-l:62%;
+  color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:1rem;line-height:1.45;-webkit-text-size-adjust:100%}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:3px solid var(--ring);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+[hidden]{display:none !important}
+
+.app{max-width:40rem;margin:0 auto;padding:.75rem 1rem 6.5rem}
+.top{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.75rem}
+.top h1{font-family:var(--display);font-weight:700;font-size:1.375rem;letter-spacing:-.01em;margin:0}
+.icon-btn{min-width:44px;min-height:44px;border:1px solid var(--line);background:var(--surface);border-radius:12px;display:grid;place-items:center}
+.icon-btn svg{width:20px;height:20px}
+
+/* capture card: the one loud element */
+.capture{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:.875rem;border-top:6px solid var(--primary)}
+.capture textarea{display:block;width:100%;min-height:9.5rem;max-height:50vh;resize:none;border:0;background:transparent;font-family:var(--display);font-weight:500;font-size:1.375rem;line-height:1.3;padding:.25rem .125rem;outline:none}
+.capture textarea::placeholder{color:var(--muted);opacity:1}
+.capture-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-top:.5rem}
+.capture-actions{display:flex;align-items:center;gap:.5rem}
+.capture-actions .icon-btn{min-width:48px;min-height:48px}
+.capture-actions .icon-btn svg{width:24px;height:24px}
+.btn.primary{min-height:48px}
+.wrap-toggle{display:flex;align-items:center;gap:.5rem;min-height:44px;color:var(--muted);font-weight:500}
+.wrap-toggle input{width:20px;height:20px;accent-color:var(--primary)}
+.btn{min-height:44px;padding:0 1.1rem;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-weight:600}
+.btn.primary{background:var(--primary);color:var(--primary-ink);border-color:transparent;padding:0 1.5rem;font-size:1.0625rem}
+.btn.danger{color:var(--danger)}
+.btn.small{min-height:40px;padding:0 .8rem;font-size:.9375rem}
+.field{width:100%;min-height:44px;border:1px solid var(--line);background:var(--field);border-radius:12px;padding:.5rem .75rem}
+#wrapFields{margin-top:.5rem}
+.status{display:flex;justify-content:space-between;gap:.75rem;flex-wrap:wrap;margin:.5rem .25rem 0;font-size:.8125rem;color:var(--muted);min-height:1.2em}
+#flash{color:var(--ink);font-weight:600}
+
+.view-title{font-family:var(--display);font-weight:700;font-size:1.125rem;margin:1.25rem .25rem .6rem}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:5;display:grid;grid-template-columns:repeat(4,1fr);gap:.25rem;background:var(--surface);border-top:1px solid var(--line);padding:.3rem .5rem calc(.3rem + env(safe-area-inset-bottom,0px))}
+.tabbar button{position:relative;border:0;background:transparent;min-height:54px;border-radius:12px;display:grid;justify-items:center;align-content:center;gap:2px;font-size:.75rem;font-weight:600;color:var(--muted)}
+.tabbar button[aria-current="page"]{color:var(--primary)}
+.tabbar svg{width:24px;height:24px}
+.badge{position:absolute;top:3px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--primary);color:var(--primary-ink);font-size:.6875rem;font-weight:700;line-height:18px;text-align:center}
+
+.chips{display:flex;gap:.5rem;overflow-x:auto;padding:.125rem .125rem .5rem;margin:0 -.125rem;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;min-height:40px;padding:0 .8rem;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-weight:600;font-size:.9375rem;white-space:nowrap}
+.chip .n{font-weight:500;color:var(--muted);margin-left:.35rem}
+.chip.tinted{background:hsl(var(--h) var(--s) var(--chip-l));color:hsl(var(--h) var(--s) var(--chip-tl));border-color:transparent}
+.chip.tinted .n{color:inherit;opacity:.8}
+.chip[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--ink)}
+#search{margin-bottom:.75rem}
+
+.list{list-style:none;margin:0;padding:0;display:grid;gap:.5rem}
+.note{background:var(--surface);border:1px solid var(--line);border-radius:14px;border-left:6px solid hsl(var(--h) var(--s) var(--bar-l));overflow:hidden}
+.note-head{display:grid;grid-template-columns:1fr auto;align-items:stretch}
+.note-main{display:flex;gap:.65rem;align-items:flex-start;text-align:left;border:0;background:transparent;padding:.75rem .5rem .75rem .75rem;min-height:56px}
+.note-body{flex:1;min-width:0}
+.thumb{flex:none;width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--line)}
+.photo-full{display:block;width:100%;border-radius:12px}
+.note-text{display:block;white-space:pre-wrap;overflow-wrap:anywhere}
+.note.is-done .note-text{color:var(--muted);text-decoration:line-through}
+.note-meta{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .6rem;margin-top:.4rem;font-size:.8125rem;color:var(--muted)}
+.tag{padding:.1rem .5rem;border-radius:999px;font-weight:600;background:hsl(var(--h) var(--s) var(--chip-l));color:hsl(var(--h) var(--s) var(--chip-tl))}
+.outcome{font-weight:600;color:var(--ink)}
+.check{width:52px;border:0;border-left:1px solid var(--line);background:transparent;display:grid;place-items:center}
+.check span{width:24px;height:24px;border-radius:50%;border:2px solid var(--muted);display:grid;place-items:center}
+.note.is-done .check span{background:var(--primary);border-color:var(--primary);color:var(--primary-ink)}
+.check svg{width:14px;height:14px}
+.note-actions{border-top:1px solid var(--line);padding:.75rem;display:grid;gap:.75rem}
+.note-actions p{margin:0;font-size:.8125rem;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:.5rem}
+.edit-area{width:100%;min-height:6rem;border:1px solid var(--line);background:var(--field);border-radius:12px;padding:.6rem .75rem;resize:vertical}
+
+.group-title{font-family:var(--display);font-weight:700;font-size:1.125rem;margin:1rem .25rem .25rem}
+.group-title:first-child{margin-top:0}
+.empty{color:var(--muted);padding:1.5rem .25rem;margin:0}
+
+.sheet{position:fixed;inset:0;z-index:10;background:var(--bg);overflow:auto;padding:calc(env(safe-area-inset-top,0px) + 1rem) 1rem calc(env(safe-area-inset-bottom,0px) + 2rem)}
+.sheet-inner{max-width:40rem;margin:0 auto;display:grid;gap:1.25rem}
+.sheet h2{font-family:var(--display);font-weight:700;font-size:1.5rem;margin:0}
+.sheet h3{font-family:var(--display);font-weight:700;font-size:1.0625rem;margin:0 0 .5rem}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:.875rem}
+.panel p{margin:0 0 .6rem;color:var(--muted);font-size:.9375rem}
+.panel p:last-child{margin-bottom:0}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:1rem;min-height:44px;font-weight:600}
+.switch input{width:22px;height:22px;accent-color:var(--primary)}
+.bucket-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.35rem 0}
+.add-row{display:flex;gap:.5rem;margin-top:.5rem}
+.add-row .field{flex:1}
+#exportText{width:100%;min-height:12rem;font-size:.875rem}
+@media (prefers-reduced-motion:no-preference){
+  .note-actions{animation:open .14s ease-out}
+  @keyframes open{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+}
+.top .btn.small{min-height:40px}
+.form{display:grid;gap:.5rem}
+.form label{font-size:.8125rem;font-weight:600;color:var(--muted)}
+.ok-line{font-weight:600;color:var(--ink)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.8125rem;word-break:break-all}
+textarea.field{min-height:6rem;resize:vertical}
+.panel .form{margin-top:.7rem}
+.panel .ok-line{color:var(--ink)}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="top">
+    <h1>Quick Capture</h1>
+    <button class="btn small" id="checkinBtn">Check in</button>
+  </header>
+
+  <section class="capture" aria-label="New note">
+    <label class="sr" for="box">New note</label>
+    <textarea id="box" rows="3" placeholder="What's on your mind?" enterkeyhint="enter"></textarea>
+    <div id="wrapFields" hidden>
+      <label class="sr" for="eventName">Event name</label>
+      <input class="field" id="eventName" list="events" placeholder="Which event? VBS, Christmas, Easter" autocomplete="off">
+      <datalist id="events"></datalist>
+    </div>
+    <div class="capture-row">
+      <label class="wrap-toggle"><input type="checkbox" id="isWrap"> Event wrap</label>
+      <div class="capture-actions">
+        <button class="icon-btn" id="photoBtn" aria-label="Add a photo note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        </button>
+        <input type="file" id="photo" accept="image/*" hidden>
+        <button class="btn primary" id="captureBtn">Capture</button>
+      </div>
+    </div>
+  </section>
+  <div class="status"><span id="storage">Starting</span><span id="flash" role="status" aria-live="polite"></span></div>
+
+  <h2 class="view-title" id="viewTitle">Open notes</h2>
+  <div class="chips" id="filters" aria-label="Filter by bucket"></div>
+  <label class="sr" for="search">Search notes</label>
+  <input class="field" id="search" type="search" placeholder="Search notes" autocomplete="off">
+  <div id="listWrap"></div>
+</main>
+
+<nav class="tabbar" aria-label="Sections">
+  <button data-view="open" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13l2.5-8h11L20 13v6H4z"/><path d="M4 13h5a3 3 0 0 0 6 0h5"/></svg><span>Open</span><span class="badge" hidden></span></button>
+  <button data-view="playbooks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg><span>Playbooks</span><span class="badge" hidden></span></button>
+  <button data-view="done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8 12.5l2.8 2.8L16 9.8"/></svg><span>Done</span></button>
+  <button id="openSettings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span>Settings</span></button>
+</nav>
+
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="sheet-inner">
+    <header class="top" style="margin:0">
+      <h2 id="sheetTitle">Settings</h2>
+      <button class="btn" id="closeSettings">Close</button>
+    </header>
+    <div id="sheetBody" style="display:grid;gap:1.25rem"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const MODEL = 'claude-haiku-4-5-20251001';
+const $ = s => document.querySelector(s);
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+const K = {notes:'qc2.notes', settings:'qc2.settings', conn:'qc2.conn', meta:'qc2.meta', secret:'qc2.secret'};
+const DEFAULT_BUCKETS = [
+  {id:'avfix', label:'A/V fix', hue:28, sat:80, hint:'equipment, cables, audio, video, streaming or booth problems to fix'},
+  {id:'content', label:'Content idea', hue:268, sat:58, hint:'ideas for videos, reels, thumbnails, titles, posts or episodes'},
+  {id:'volunteer', label:'Volunteer follow-up', hue:172, sat:70, hint:'something to tell, ask, teach or schedule with a volunteer or team member'},
+  {id:'purchase', label:'Purchase', hue:140, sat:55, hint:'things to buy, order, price or request budget for'},
+  {id:'misc', label:'Misc', hue:215, sat:14, hint:'any other note of any kind'}
+];
+const PLAYBOOK_TINT = {hue:215, sat:70};
+const PALETTE = [[330,60],[200,70],[48,85],[0,60],[95,45],[290,45]];
+const RULES = [
+  ['purchase', /\b(buy|order|purchase|price|quote|budget|amazon|sweetwater|invoice)\b|\$\d/i],
+  ['volunteer', /\b(volunteer|volunteers|train|training|schedule|sign[- ]?off|thank|follow up with|team)\b/i],
+  ['content', /\b(video|reel|thumbnail|title|post|episode|clip|caption|youtube|podcast|series)\b/i],
+  ['avfix', /\b(fix|broken|replace|cable|mic|camera|audio|fader|stream|projector|screen|speaker|battery|wireless|dante|propresenter|atem|console|tripod|hum|buzz)\b/i]
+];
+
+const state = {view:'open', filter:'all', query:'', openId:null, editId:null, confirmId:null};
+let notes = {};
+let settings = {buckets: DEFAULT_BUCKETS.map(b => Object.assign({}, b)), autoSort:true, rev:0};
+let secret = {apiKey:'', rev:0}, secretChecked = 0;
+let conn = null;
+let meta = {sha:null, etag:null, dirty:false, last:0, inboxEtag:null};
+let syncState = 'none', busy = false, again = false, changeSeq = 0, syncTimer = 0, flashTimer = 0, aiOff = false;
+const reading = new Set(), photoURLs = new Map();
+
+const box = $('#box'), wrapToggle = $('#isWrap'), wrapFields = $('#wrapFields'), eventInput = $('#eventName');
+
+/* ---------- small helpers ---------- */
+function lsGet(key){ try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch(e){ return null; } }
+function lsSet(key, val){ try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch(e){ return false; } }
+function b64e(str){ const bytes = new TextEncoder().encode(str); let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(bin); }
+function b64d(b64){ const bin = atob(String(b64).replace(/\s/g, '')); const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i); return new TextDecoder().decode(bytes); }
+function blobToB64(blob){ return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1] || ''); fr.onerror = rej; fr.readAsDataURL(blob); }); }
+function newId(){ return 'n_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8); }
+function say(msg){ const f = $('#flash'); f.textContent = msg; clearTimeout(flashTimer); flashTimer = setTimeout(() => { f.textContent = ''; }, 4500); }
+function fmt(iso){ const d = new Date(iso); if (isNaN(d)) return ''; return d.toLocaleDateString(undefined, {month:'short', day:'numeric'}) + ', ' + d.toLocaleTimeString(undefined, {hour:'numeric', minute:'2-digit'}); }
+function tint(node, hue, sat){ node.style.setProperty('--h', hue); node.style.setProperty('--s', sat + '%'); }
+
+/* ---------- local store ---------- */
+function persist(){ if (!lsSet(K.notes, notes)) say('This device is out of storage for notes.'); }
+function saveSettingsLocal(){ lsSet(K.settings, settings); }
+function saveMeta(){ lsSet(K.meta, meta); }
+function applySettings(s){
+  if (!s || typeof s !== 'object') return;
+  if (Array.isArray(s.buckets)) {
+    const clean = s.buckets.filter(b => b && typeof b.id === 'string' && typeof b.label === 'string')
+      .map(b => ({id:b.id, label:b.label, hue:Number(b.hue) || 215, sat:Number(b.sat) || 40, hint: typeof b.hint === 'string' ? b.hint : ''}));
+    if (!clean.some(b => b.id === 'misc')) clean.push(Object.assign({}, DEFAULT_BUCKETS[4]));
+    settings.buckets = clean;
+  }
+  if (typeof s.autoSort === 'boolean') settings.autoSort = s.autoSort;
+  settings.rev = Number(s.rev) || 0;
+}
+function load(){
+  const n = lsGet(K.notes); if (n && typeof n === 'object') notes = n;
+  applySettings(lsGet(K.settings));
+  const c = lsGet(K.conn); if (c && c.owner && c.repo && c.token) conn = c;
+  const m = lsGet(K.meta); if (m && typeof m === 'object') meta = Object.assign(meta, m);
+  const k = lsGet(K.secret); if (k && typeof k.apiKey === 'string') secret = {apiKey:k.apiKey, rev:Number(k.rev) || 0};
+}
+function markDirty(){ changeSeq++; meta.dirty = true; saveMeta(); scheduleSync(1200); }
+function touch(id, n){ n.rev = Date.now(); notes[id] = n; persist(); markDirty(); }
+function patch(id, p){ const n = notes[id]; if (!n || n.deleted) return; touch(id, Object.assign({}, n, p)); render(); }
+function remove(id){ const n = notes[id]; if (!n) return; if (n.photo) dropPhoto(id, n.photo); touch(id, {deleted:true}); render(); }
+function changeSettings(){ settings.rev = Date.now(); saveSettingsLocal(); markDirty(); }
+function visible(){
+  const out = [];
+  Object.keys(notes).forEach(id => { const n = notes[id]; if (n && !n.deleted && (n.kind === 'note' || n.kind === 'playbook') && typeof n.text === 'string') out.push(Object.assign({id:id}, n)); });
+  out.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+  return out;
+}
+function bucketById(id){ return settings.buckets.find(b => b.id === id) || null; }
+function bucketOf(n){ return bucketById(n.bucket) || bucketById('misc') || settings.buckets[0]; }
+function ruleSort(text){ for (const r of RULES) { if (r[1].test(text) && bucketById(r[0])) return r[0]; } return 'misc'; }
+
+/* ---------- GitHub sync ---------- */
+function ghUrl(path){
+  const base = (conn.api || 'https://api.github.com') + '/repos/' + encodeURIComponent(conn.owner) + '/' + encodeURIComponent(conn.repo) + '/contents';
+  return path ? base + '/' + path.split('/').map(encodeURIComponent).join('/') : base;
+}
+function gh(method, path, opts){
+  opts = opts || {};
+  const headers = {'Accept': opts.raw ? 'application/vnd.github.raw+json' : 'application/vnd.github+json', 'Authorization': 'Bearer ' + conn.token, 'X-GitHub-Api-Version': '2022-11-28'};
+  if (opts.etag) headers['If-None-Match'] = opts.etag;
+  if (opts.body) headers['Content-Type'] = 'application/json';
+  return fetch(ghUrl(path), {method:method, headers:headers, cache:'no-store', body: opts.body ? JSON.stringify(opts.body) : undefined});
+}
+async function httpErr(res){
+  let msg = ''; try { const j = await res.json(); msg = j && j.message || ''; } catch(e){}
+  return {http:res.status, message:msg, limited: res.headers.get('X-RateLimit-Remaining') === '0'};
+}
+async function readRemote(){
+  const res = await gh('GET', 'notes.json', {etag:meta.etag});
+  if (res.status === 304) return {status:304};
+  if (res.status === 404) return {status:404};
+  if (!res.ok) throw await httpErr(res);
+  const j = await res.json();
+  let text;
+  if (j.content) text = b64d(j.content);
+  else { const raw = await gh('GET', 'notes.json', {raw:true}); if (!raw.ok) throw await httpErr(raw); text = await raw.text(); }
+  let data;
+  try { data = JSON.parse(text); } catch(e){ throw {corrupt:true}; }
+  if (!data || typeof data !== 'object') throw {corrupt:true};
+  return {status:200, data:data, sha:j.sha, etag:res.headers.get('ETag')};
+}
+function mergeRemote(data){
+  let changed = false, localWins = false;
+  const rn = (data.notes && typeof data.notes === 'object') ? data.notes : {};
+  const ids = new Set(Object.keys(notes).concat(Object.keys(rn)));
+  ids.forEach(id => {
+    const a = notes[id], b = rn[id];
+    if (!a) { notes[id] = b; changed = true; }
+    else if (!b) { localWins = true; }
+    else { const ar = a.rev || 0, br = b.rev || 0; if (br > ar) { notes[id] = b; changed = true; } else if (ar > br) { localWins = true; } }
+  });
+  const rs = data.settings, rrev = (rs && Number(rs.rev)) || 0, lrev = settings.rev || 0;
+  if (rs && rrev > lrev) { applySettings(rs); saveSettingsLocal(); changed = true; }
+  else if (lrev > rrev) localWins = true;
+  return {changed:changed, localWins:localWins};
+}
+function serialize(){ return JSON.stringify({v:1, notes:notes, settings:{buckets:settings.buckets, autoSort:settings.autoSort, rev:settings.rev || 0}}); }
+/* The API key lives in its own file, secrets.json, so notes.json holds nothing but notes. */
+async function syncSecret(){
+  const localNewer = (secret.rev || 0) > (meta.secretRemoteRev || 0);
+  if (!localNewer && Date.now() - secretChecked < 300000) return;
+  const res = await gh('GET', 'secrets.json', {etag:meta.secretEtag});
+  let sha = meta.secretSha || null;
+  if (res.status === 404) { sha = null; meta.secretEtag = null; meta.secretRemoteRev = 0; }
+  else if (res.ok) {
+    const j = await res.json(); sha = j.sha; meta.secretEtag = res.headers.get('ETag');
+    let remote = null; try { remote = JSON.parse(b64d(j.content || '')); } catch(e){}
+    const rrev = (remote && Number(remote.rev)) || 0; meta.secretRemoteRev = rrev;
+    if (remote && rrev > (secret.rev || 0)) { secret = {apiKey:String(remote.apiKey || ''), rev:rrev}; lsSet(K.secret, secret); aiOff = false; }
+  }
+  else if (res.status !== 304) { if (res.status === 401) throw await httpErr(res); return; }
+  meta.secretSha = sha; secretChecked = Date.now();
+  if ((secret.rev || 0) > (meta.secretRemoteRev || 0)) {
+    const body = {message:'Quick Capture: key updated', content:b64e(JSON.stringify(secret))}; if (sha) body.sha = sha;
+    const put = await gh('PUT', 'secrets.json', {body:body});
+    if (put.ok) { const j = await put.json(); meta.secretSha = (j.content && j.content.sha) || null; meta.secretEtag = null; meta.secretRemoteRev = secret.rev; }
+    else { meta.secretEtag = null; secretChecked = 0; }
+  }
+}
+async function ingestInbox(){
+  const res = await gh('GET', 'inbox', {etag:meta.inboxEtag});
+  if (res.status === 304 || res.status === 404) return;
+  if (!res.ok) { if (res.status === 401) throw await httpErr(res); return; }
+  const etag = res.headers.get('ETag');
+  const list = await res.json(); if (!Array.isArray(list)) return;
+  const added = []; let removed = false;
+  for (const f of list) {
+    if (!f || f.type !== 'file') continue;
+    const id = 'in_' + String(f.name).replace(/[^A-Za-z0-9]/g, '_').slice(0, 60);
+    if (!notes[id]) {
+      const fr = await gh('GET', f.path); if (!fr.ok) continue;
+      const fj = await fr.json(); let text = '';
+      try { text = b64d(fj.content || '').trim(); } catch(e){}
+      if (text) { touch(id, {kind:'note', text:text.slice(0, 8000), bucket:ruleSort(text), sortedBy:'rule', status:'open', createdAt:new Date().toISOString(), via:'inbox'}); added.push(id); }
+    }
+    const del = await gh('DELETE', f.path, {body:{message:'Quick Capture: inbox read', sha:f.sha}});
+    if (del.ok) removed = true;
+  }
+  meta.inboxEtag = removed ? null : etag;
+  if (added.length) { render(); added.forEach(id => { smartSort(id); }); }
+}
+function scheduleSync(ms){ clearTimeout(syncTimer); syncTimer = setTimeout(sync, ms); }
+async function sync(){
+  if (!conn) { setSync('none'); return; }
+  if (busy) { again = true; return; }
+  busy = true; setSync('syncing');
+  try {
+    await syncSecret();
+    await pushPendingPhotos();
+    await ingestInbox();
+    let ok = false;
+    for (let i = 0; i < 4 && !ok; i++) {
+      const r = await readRemote();
+      let sha = meta.sha, needPush = meta.dirty;
+      if (r.status === 200) {
+        sha = r.sha; meta.etag = r.etag;
+        const m = mergeRemote(r.data); needPush = m.localWins;
+        if (m.changed) { persist(); render(); }
+      } else if (r.status === 404) { sha = null; needPush = true; }
+      else if (needPush && !sha) { meta.etag = null; continue; }
+      if (!needPush) { meta.sha = sha; meta.dirty = false; ok = true; break; }
+      const seq = changeSeq;
+      const body = {message:'Quick Capture sync', content:b64e(serialize())}; if (sha) body.sha = sha;
+      const put = await gh('PUT', 'notes.json', {body:body});
+      if (put.ok) { const j = await put.json(); meta.sha = (j.content && j.content.sha) || null; meta.etag = null; meta.dirty = changeSeq !== seq; ok = true; }
+      else if (put.status === 409 || put.status === 422) { meta.etag = null; }
+      else throw await httpErr(put);
+    }
+    if (!ok) throw {conflict:true};
+    meta.last = Date.now(); saveMeta(); setSync('ok');
+  } catch(e){
+    saveMeta();
+    if (e && e.corrupt) setSync('corrupt');
+    else if (e && e.http === 401) setSync('auth');
+    else if (e && e.http === 403) setSync(e.limited ? 'error' : 'auth');
+    else if (e && e.http === 404) setSync('missing');
+    else if (e && (e.http || e.conflict)) setSync('error');
+    else setSync('offline');
+  } finally {
+    busy = false;
+    if (again || (meta.dirty && syncState === 'ok')) { again = false; scheduleSync(600); }
+  }
+}
+function setSync(s){
+  syncState = s;
+  const text = {
+    none:'Not connected. Notes are on this device only.',
+    syncing:'Syncing',
+    ok:'Synced',
+    offline:'Offline. Saved here, will sync later.',
+    auth:'GitHub rejected the token. Update it in Settings.',
+    missing:'Data repository not found. Check Settings.',
+    corrupt:'The notes file on GitHub is damaged. Sync is paused.',
+    error:'Sync problem. Will retry.'
+  }[s] || '';
+  $('#storage').textContent = text;
+  const live = $('#connStatus'); if (live) live.textContent = text;
+}
+
+/* ---------- photos ---------- */
+function photoCache(){ return caches.open('qc-photos-v1'); }
+async function storePhotoLocal(id, blob){
+  try { const c = await photoCache(); await c.put('./__photo/' + id, new Response(blob, {headers:{'Content-Type':blob.type || 'image/jpeg'}})); } catch(e){}
+  try { photoURLs.set(id, URL.createObjectURL(blob)); } catch(e){}
+}
+async function localPhotoBlob(id){ try { const c = await photoCache(); const r = await c.match('./__photo/' + id); return r ? await r.blob() : null; } catch(e){ return null; } }
+async function getPhotoURL(id){
+  if (photoURLs.has(id)) return photoURLs.get(id);
+  const b = await localPhotoBlob(id);
+  if (b) { const u = URL.createObjectURL(b); photoURLs.set(id, u); return u; }
+  if (!conn) return '';
+  try {
+    const res = await gh('GET', 'photos/' + id + '.jpg', {raw:true}); if (!res.ok) return '';
+    await storePhotoLocal(id, await res.blob()); return photoURLs.get(id) || '';
+  } catch(e){ return ''; }
+}
+async function uploadPhoto(id){
+  if (!conn) return false;
+  const blob = await localPhotoBlob(id);
+  if (!blob) { patch(id, {photo:false}); return false; }
+  try {
+    const res = await gh('PUT', 'photos/' + id + '.jpg', {body:{message:'Quick Capture photo', content:await blobToB64(blob)}});
+    if (res.ok || res.status === 422) { patch(id, {photo:'up'}); return true; }
+  } catch(e){}
+  return false;
+}
+async function pushPendingPhotos(){
+  const ids = Object.keys(notes).filter(id => notes[id] && !notes[id].deleted && notes[id].photo === 'local');
+  for (const id of ids) await uploadPhoto(id);
+}
+async function dropPhoto(id, stateWas){
+  try { const c = await photoCache(); await c.delete('./__photo/' + id); } catch(e){}
+  if (!conn || stateWas !== 'up') return;
+  try {
+    const res = await gh('GET', 'photos/' + id + '.jpg'); if (!res.ok) return;
+    const j = await res.json();
+    await gh('DELETE', 'photos/' + id + '.jpg', {body:{message:'Quick Capture: photo removed', sha:j.sha}});
+  } catch(e){}
+}
+async function shrink(file){
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.8));
+    if (!blob) throw new Error('encode');
+    return blob;
+  } finally { URL.revokeObjectURL(url); }
+}
+function hydratePhotos(root){
+  root.querySelectorAll('img[data-photo]').forEach(img => {
+    getPhotoURL(img.dataset.photo).then(u => { if (u) img.src = u; else img.remove(); });
+  });
+}
+
+/* ---------- Claude, optional, with the person's own API key ---------- */
+function claudeOn(){ return !!secret.apiKey && settings.autoSort && !aiOff; }
+async function askClaude(content, maxTokens){
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'content-type':'application/json', 'x-api-key':secret.apiKey, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:MODEL, max_tokens:maxTokens, messages:[{role:'user', content:content}]})
+  });
+  if (!res.ok) { if (res.status === 401 || res.status === 403) { aiOff = true; say('Claude rejected the API key. Check it in Settings.'); } throw new Error('claude ' + res.status); }
+  const data = await res.json();
+  const text = (data.content || []).map(c => c.type === 'text' ? c.text : '').join('');
+  const m = text.replace(/```json|```/g, '').match(/\{[\s\S]*\}/);
+  return JSON.parse(m ? m[0] : text);
+}
+function bucketList(){ return settings.buckets.map(b => b.id + ': ' + b.label + (b.hint ? ' (' + b.hint + ')' : '')).join('\n'); }
+async function smartSort(id){
+  const n = notes[id]; if (!n || n.deleted || !claudeOn()) return;
+  const prompt = 'Sort one short note into exactly one bucket.\n\nBuckets, as id: meaning\n' + bucketList() +
+    '\n\nReply with only JSON like {"bucket":"misc"}, using one of the ids above. If unsure, use "misc".\n\nNote:\n' + n.text.slice(0, 2000);
+  try {
+    const r = await askClaude(prompt, 60);
+    const b = r && typeof r.bucket === 'string' ? r.bucket : '';
+    const cur = notes[id];
+    if (b && bucketById(b) && cur && !cur.deleted && cur.sortedBy !== 'manual' && cur.status === 'open' && cur.bucket !== b) patch(id, {bucket:b, sortedBy:'ai'});
+  } catch(e){}
+}
+async function readPhoto(id, blob, caption){
+  if (!claudeOn()) return false;
+  const prompt = 'This photo was captured as a quick note. It may show a whiteboard, a receipt, a label or serial number plate, a screen, or handwriting.\n\n' +
+    'Write the useful text from it, exactly as shown, especially model numbers, serial numbers, prices, dates and names. For a receipt give the vendor, date, total and the main items. Keep line breaks where they help. If nothing is readable, describe what the photo shows in one short sentence.\n\n' +
+    (caption ? 'The person added this caption: ' + caption.slice(0, 500) + '\n\n' : '') +
+    'Then pick one bucket. Buckets, as id: meaning\n' + bucketList() + '\n\nReply with only JSON like {"text":"...","bucket":"misc"}.';
+  try {
+    const data = await blobToB64(blob);
+    const r = await askClaude([{type:'image', source:{type:'base64', media_type:'image/jpeg', data:data}}, {type:'text', text:prompt}], 1000);
+    const t = r && typeof r.text === 'string' ? r.text.trim().slice(0, 4000) : '';
+    const b = r && typeof r.bucket === 'string' && bucketById(r.bucket) ? r.bucket : null;
+    const cur = notes[id];
+    if (!t || !cur || cur.deleted) return false;
+    const p = {text: caption ? caption + '\n' + t : t};
+    if (b && cur.sortedBy !== 'manual') { p.bucket = b; p.sortedBy = 'ai'; }
+    patch(id, p); return true;
+  } catch(e){ return false; }
+}
+
+/* ---------- capture ---------- */
+function capture(){
+  const text = box.value.trim();
+  if (!text) { box.focus(); return; }
+  const isWrap = wrapToggle.checked; let event = '';
+  if (isWrap) { event = eventInput.value.trim(); if (!event) { say('Name the event so this wrap can be found next year.'); eventInput.focus(); return; } }
+  const id = newId(), now = new Date().toISOString();
+  box.value = ''; autosize();
+  if (isWrap) { wrapToggle.checked = false; wrapFields.hidden = true; eventInput.value = ''; touch(id, {kind:'playbook', text:text, event:event, status:'open', createdAt:now}); }
+  else touch(id, {kind:'note', text:text, bucket:ruleSort(text), sortedBy:'rule', status:'open', createdAt:now});
+  render(); say(isWrap ? 'Saved to playbooks.' : 'Captured.');
+  if (!isWrap) smartSort(id);
+}
+async function capturePhoto(file){
+  if (!file) return;
+  const caption = box.value.trim(), id = newId(), now = new Date().toISOString();
+  box.value = ''; autosize();
+  let blob;
+  try { blob = await shrink(file); } catch(e){ say('That image could not be opened.'); if (caption) { box.value = caption; autosize(); } return; }
+  await storePhotoLocal(id, blob);
+  touch(id, {kind:'note', text:caption || 'Photo', bucket:caption ? ruleSort(caption) : 'misc', sortedBy:'rule', status:'open', createdAt:now, photo:'local'});
+  reading.add(id); render(); say('Photo captured.');
+  const read = await readPhoto(id, blob, caption);
+  reading.delete(id); render();
+  if (read) say('Photo read and filed.');
+  else if (secret.apiKey && settings.autoSort) say('Photo saved. The text could not be read.');
+}
+
+/* ---------- rendering ---------- */
+function matches(n){ const q = state.query.trim().toLowerCase(); if (!q) return true; return (n.text + ' ' + (n.event || '')).toLowerCase().indexOf(q) !== -1; }
+function render(){
+  const all = visible();
+  const open = all.filter(n => n.kind === 'note' && n.status !== 'done');
+  const done = all.filter(n => n.kind === 'note' && n.status === 'done');
+  const books = all.filter(n => n.kind === 'playbook');
+  const counts = {open:open.length, playbooks:books.length};
+  document.querySelectorAll('.tabbar button[data-view]').forEach(b => {
+    const v = b.dataset.view, badge = b.querySelector('.badge');
+    if (v === state.view) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    if (badge) { badge.hidden = !counts[v]; badge.textContent = counts[v] ? String(counts[v]) : ''; }
+  });
+  $('#viewTitle').textContent = {open:'Open notes', playbooks:'Playbooks', done:'Done'}[state.view];
+
+  const filters = $('#filters'); filters.textContent = ''; filters.hidden = state.view !== 'open';
+  if (state.view === 'open') {
+    if (state.filter !== 'all' && !bucketById(state.filter)) state.filter = 'all';
+    const a = el('button', 'chip', 'All'); a.dataset.filter = 'all'; a.setAttribute('aria-pressed', String(state.filter === 'all'));
+    a.appendChild(el('span', 'n', String(open.length))); filters.appendChild(a);
+    settings.buckets.forEach(b => {
+      const c = el('button', 'chip tinted', b.label); c.dataset.filter = b.id; tint(c, b.hue, b.sat);
+      c.setAttribute('aria-pressed', String(state.filter === b.id));
+      c.appendChild(el('span', 'n', String(open.filter(n => bucketOf(n).id === b.id).length))); filters.appendChild(c);
+    });
+  }
+  const dl = $('#events'); dl.textContent = ''; const evs = [];
+  books.forEach(n => { if (n.event && evs.indexOf(n.event) === -1) evs.push(n.event); });
+  ['VBS', 'Christmas', 'Easter'].forEach(e => { if (evs.indexOf(e) === -1) evs.push(e); });
+  evs.forEach(e => { const o = document.createElement('option'); o.value = e; dl.appendChild(o); });
+
+  const wrap = $('#listWrap'); wrap.textContent = '';
+  if (state.view === 'playbooks') {
+    const shown = books.filter(matches);
+    if (!shown.length) { wrap.appendChild(el('p', 'empty', books.length ? 'No playbook entries match that search.' : 'No playbooks yet. After a big event, tick Event wrap and capture what worked, what to change, and the gear you used.')); return; }
+    const groups = new Map();
+    shown.forEach(n => { const k = n.event || 'Other'; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(n); });
+    groups.forEach((items, name) => { wrap.appendChild(el('h2', 'group-title', name)); const ol = el('ol', 'list'); items.forEach(n => ol.appendChild(noteNode(n))); wrap.appendChild(ol); });
+    hydratePhotos(wrap); return;
+  }
+  let items = state.view === 'done' ? done : open;
+  if (state.view === 'open' && state.filter !== 'all') items = items.filter(n => bucketOf(n).id === state.filter);
+  const total = items.length; items = items.filter(matches);
+  if (!items.length) {
+    let msg = 'Nothing captured yet. Type a thought above and tap Capture.';
+    if (state.view === 'done') msg = 'Nothing marked done yet.';
+    else if (total) msg = 'No notes match that search.';
+    else if (state.filter !== 'all') msg = 'Nothing open in this bucket.';
+    wrap.appendChild(el('p', 'empty', msg)); return;
+  }
+  const ol = el('ol', 'list'); items.forEach(n => ol.appendChild(noteNode(n))); wrap.appendChild(ol);
+  hydratePhotos(wrap);
+}
+function photoImg(n, cls, alt){
+  const im = document.createElement('img'); im.className = cls; im.alt = alt; im.dataset.photo = n.id;
+  if (photoURLs.has(n.id)) im.src = photoURLs.get(n.id);
+  im.addEventListener('error', () => { im.remove(); });
+  return im;
+}
+function noteNode(n){
+  const isBook = n.kind === 'playbook', isDone = n.status === 'done';
+  const b = isBook ? null : bucketOf(n);
+  const li = el('li', 'note' + (isDone ? ' is-done' : ''));
+  tint(li, isBook ? PLAYBOOK_TINT.hue : b.hue, isBook ? PLAYBOOK_TINT.sat : b.sat);
+  const head = el('div', 'note-head');
+  const main = el('button', 'note-main'); main.dataset.act = 'toggle'; main.dataset.id = n.id;
+  main.setAttribute('aria-expanded', String(state.openId === n.id));
+  if (n.photo) main.appendChild(photoImg(n, 'thumb', ''));
+  const body = el('span', 'note-body');
+  body.appendChild(el('span', 'note-text', n.text));
+  const metaRow = el('span', 'note-meta');
+  if (b) metaRow.appendChild(el('span', 'tag', b.label));
+  metaRow.appendChild(el('span', '', fmt(n.createdAt)));
+  if (reading.has(n.id)) metaRow.appendChild(el('span', 'outcome', 'Reading photo'));
+  body.appendChild(metaRow); main.appendChild(body); head.appendChild(main);
+  if (!isBook) {
+    const chk = el('button', 'check'); chk.dataset.act = isDone ? 'reopen' : 'done'; chk.dataset.id = n.id;
+    chk.setAttribute('aria-label', isDone ? 'Reopen note' : 'Mark done');
+    const ring = el('span');
+    if (isDone) ring.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+    chk.appendChild(ring); head.appendChild(chk);
+  }
+  li.appendChild(head);
+  if (state.openId === n.id) li.appendChild(actionsNode(n, isBook));
+  return li;
+}
+function actBtn(label, act, id, cls){ const b = el('button', 'btn small' + (cls ? ' ' + cls : ''), label); b.dataset.act = act; if (id) b.dataset.id = id; return b; }
+function actionsNode(n, isBook){
+  const wrap = el('div', 'note-actions');
+  if (n.photo) wrap.appendChild(photoImg(n, 'photo-full', 'Photo attached to this note'));
+  if (state.editId === n.id) {
+    const ta = el('textarea', 'edit-area'); ta.value = n.text; ta.id = 'editArea'; ta.setAttribute('aria-label', 'Edit note'); wrap.appendChild(ta);
+    const r = el('div', 'row'); r.appendChild(actBtn('Save changes', 'save', n.id)); r.appendChild(actBtn('Cancel', 'cancel', n.id)); wrap.appendChild(r);
+    return wrap;
+  }
+  if (!isBook && n.status !== 'done') {
+    wrap.appendChild(el('p', '', 'Move to'));
+    const r = el('div', 'row');
+    settings.buckets.forEach(b => { if (b.id === bucketOf(n).id) return; const c = el('button', 'chip tinted', b.label); c.dataset.act = 'move'; c.dataset.id = n.id; c.dataset.bucket = b.id; tint(c, b.hue, b.sat); r.appendChild(c); });
+    wrap.appendChild(r);
+  }
+  const r2 = el('div', 'row'); r2.appendChild(actBtn('Edit', 'edit', n.id));
+  if (state.confirmId === n.id) { r2.appendChild(actBtn('Yes, delete it', 'delete', n.id, 'danger')); r2.appendChild(actBtn('Keep it', 'cancel', n.id)); }
+  else r2.appendChild(actBtn('Delete', 'confirm', n.id, 'danger'));
+  wrap.appendChild(r2);
+  return wrap;
+}
+
+/* ---------- settings ---------- */
+function field(id, label, value, type, placeholder){
+  const w = el('div', 'form'); const l = el('label', '', label); l.htmlFor = id; w.appendChild(l);
+  const i = document.createElement('input'); i.className = 'field'; i.id = id; i.type = type || 'text'; i.value = value || ''; i.autocomplete = 'off'; i.autocapitalize = 'off'; i.spellcheck = false;
+  if (placeholder) i.placeholder = placeholder; w.appendChild(i); return w;
+}
+function setupLink(){ return location.origin + location.pathname + '#setup=' + encodeURIComponent(b64e(JSON.stringify(conn))); }
+function renderSettings(){
+  const body = $('#sheetBody'); body.textContent = '';
+
+  const p0 = el('section', 'panel'); p0.appendChild(el('h3', '', 'Sync'));
+  const st = el('p', 'ok-line', ''); st.id = 'connStatus'; p0.appendChild(st);
+  p0.appendChild(field('ghOwner', 'GitHub username', conn && conn.owner, 'text', 'your-username'));
+  p0.appendChild(field('ghRepo', 'Private data repository', (conn && conn.repo) || 'quick-capture-data'));
+  p0.appendChild(field('ghToken', 'Access token', conn && conn.token, 'password', 'github_pat_...'));
+  const r0 = el('div', 'row'); r0.style.marginTop = '.75rem';
+  r0.appendChild(actBtn(conn ? 'Save and sync' : 'Connect', 'connect'));
+  if (conn) { r0.appendChild(actBtn('Copy lock screen link', 'copyLink')); r0.appendChild(actBtn('Disconnect', 'disconnect', null, 'danger')); }
+  p0.appendChild(r0);
+  if (conn) { const hint = el('p', '', 'The lock screen link signs the Safari copy in automatically. Put it in your Shortcut. Treat it like a password.'); hint.style.marginTop = '.6rem'; p0.appendChild(hint); }
+  const lt = el('textarea', 'field mono'); lt.id = 'linkText'; lt.hidden = true; lt.readOnly = true; lt.setAttribute('aria-label', 'Lock screen link'); lt.style.marginTop = '.6rem'; p0.appendChild(lt);
+  body.appendChild(p0);
+
+  const p1 = el('section', 'panel'); p1.appendChild(el('h3', '', 'Smart sorting'));
+  const sw = el('label', 'switch', 'Let Claude sort notes and read photos');
+  const cb = document.createElement('input'); cb.type = 'checkbox'; cb.id = 'autoSort'; cb.checked = settings.autoSort; sw.appendChild(cb); p1.appendChild(sw);
+  p1.appendChild(field('apiKey', 'Anthropic API key (optional)', secret.apiKey, 'password', 'sk-ant-...'));
+  const r1 = el('div', 'row'); r1.style.margin = '.75rem 0 .6rem'; r1.appendChild(actBtn('Save key', 'saveKey')); p1.appendChild(r1);
+  p1.appendChild(el('p', '', secret.apiKey
+    ? 'Notes are sorted by keywords instantly, then Claude double-checks the bucket and reads text from photos. Usage is billed to your API key.'
+    : 'Without a key, notes are sorted by keywords and photos are saved without reading their text.'));
+  p1.appendChild(el('p', '', 'The key is kept in its own file, secrets.json, in your private repository. It is never stored with your notes.'));
+  body.appendChild(p1);
+
+  const p2 = el('section', 'panel'); p2.appendChild(el('h3', '', 'Buckets'));
+  settings.buckets.forEach(b => {
+    const row = el('div', 'bucket-row'); const tag = el('span', 'tag', b.label); tint(tag, b.hue, b.sat); row.appendChild(tag);
+    if (b.id !== 'misc') row.appendChild(actBtn('Remove', 'rmBucket', b.id, 'danger'));
+    p2.appendChild(row);
+  });
+  p2.appendChild(el('p', '', 'Notes in a removed bucket move to Misc.'));
+  const add = el('div', 'add-row');
+  const inp = document.createElement('input'); inp.className = 'field'; inp.id = 'newBucket'; inp.placeholder = 'New bucket name'; inp.maxLength = 30; inp.setAttribute('aria-label', 'New bucket name');
+  add.appendChild(inp); const ab = el('button', 'btn', 'Add bucket'); ab.dataset.act = 'addBucket'; add.appendChild(ab); p2.appendChild(add);
+  body.appendChild(p2);
+
+  const p4 = el('section', 'panel'); p4.appendChild(el('h3', '', 'Export and import'));
+  p4.appendChild(el('p', '', 'Export copies every note as text. Import turns pasted lines into notes, one per line.'));
+  const r4 = el('div', 'row'); r4.appendChild(actBtn('Export all notes', 'export')); r4.appendChild(actBtn('Import pasted lines', 'import')); p4.appendChild(r4);
+  const ta = el('textarea', 'field'); ta.id = 'ioText'; ta.placeholder = 'Paste lines here to import, or tap Export'; ta.setAttribute('aria-label', 'Export and import text'); ta.style.marginTop = '.6rem'; p4.appendChild(ta);
+  body.appendChild(p4);
+  setSync(syncState);
+}
+function exportText(){
+  const all = visible(), lines = ['# Quick Capture export', new Date().toLocaleString(), '', '## Open'];
+  settings.buckets.forEach(b => {
+    const it = all.filter(n => n.kind === 'note' && n.status !== 'done' && bucketOf(n).id === b.id);
+    if (!it.length) return; lines.push('', '### ' + b.label);
+    it.forEach(n => lines.push('- [ ] ' + n.text.replace(/\n/g, '\n      ') + (n.photo ? ' [photo]' : '') + ' (' + fmt(n.createdAt) + ')'));
+  });
+  const books = all.filter(n => n.kind === 'playbook');
+  if (books.length) { lines.push('', '## Playbooks'); books.forEach(n => lines.push('', '### ' + (n.event || 'Other') + ', ' + fmt(n.createdAt), n.text)); }
+  const done = all.filter(n => n.kind === 'note' && n.status === 'done');
+  if (done.length) { lines.push('', '## Done'); done.forEach(n => lines.push('- [x] ' + n.text.replace(/\n/g, '\n      ') + ' (' + bucketOf(n).label + ')')); }
+  return lines.join('\n') + '\n';
+}
+function importLines(text){
+  let count = 0; const base = Date.now();
+  text.split('\n').forEach(raw => {
+    let t = raw.trim();
+    if (!t || t.charAt(0) === '#' || /^- \[x\]/i.test(t)) return;
+    t = t.replace(/^- \[ \]\s*/, '').replace(/^[-*]\s+/, '').replace(/\s*\[photo\]/, '').replace(/\s*\([A-Z][a-z]{2} \d{1,2}, [^)]*\)\s*$/, '').trim();
+    if (!t) return;
+    touch(newId(), {kind:'note', text:t, bucket:ruleSort(t), sortedBy:'rule', status:'open', createdAt:new Date(base - count * 1000).toISOString()}); count++;
+  });
+  return count;
+}
+function checkinText(){
+  const open = visible().filter(n => n.kind === 'note' && n.status !== 'done');
+  const lines = ['Daily check-in. Here are my open Quick Capture notes. Work through them with me: each one should end as added to my task list, something to bring up with someone, or completed.', ''];
+  settings.buckets.forEach(b => {
+    const it = open.filter(n => bucketOf(n).id === b.id); if (!it.length) return;
+    lines.push(b.label + ':'); it.forEach(n => lines.push('- ' + n.text.replace(/\n/g, ' / ') + (n.photo ? ' [has photo]' : ''))); lines.push('');
+  });
+  return {text:lines.join('\n').trim(), count:open.length};
+}
+async function copyText(text, fallbackId){
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch(e){ if (fallbackId) { const t = $(fallbackId); if (t) { t.hidden = false; t.value = text; t.focus(); t.select(); } } return false; }
+}
+async function checkin(){
+  const c = checkinText();
+  if (!c.count) { say('No open notes to check in.'); return; }
+  if (navigator.share) { try { await navigator.share({text:c.text}); return; } catch(e){ if (e && e.name === 'AbortError') return; } }
+  if (await copyText(c.text)) say('Copied. Paste it into a chat with Claude.'); else say('Could not share. Use Export in Settings.');
+}
+
+/* ---------- events ---------- */
+function autosize(){ box.style.height = 'auto'; box.style.height = Math.min(box.scrollHeight, window.innerHeight * 0.5) + 'px'; }
+box.addEventListener('input', autosize);
+box.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); capture(); } });
+$('#captureBtn').addEventListener('click', capture);
+$('#checkinBtn').addEventListener('click', checkin);
+wrapToggle.addEventListener('change', () => { wrapFields.hidden = !wrapToggle.checked; if (wrapToggle.checked) eventInput.focus(); });
+$('#search').addEventListener('input', e => { state.query = e.target.value; render(); });
+document.querySelector('.tabbar').addEventListener('click', e => {
+  const b = e.target.closest('button[data-view]'); if (!b) return;
+  state.view = b.dataset.view; state.openId = state.editId = state.confirmId = null; render();
+  const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (state.view === 'open') window.scrollTo({top:0, behavior: calm ? 'auto' : 'smooth'});
+  else $('#viewTitle').scrollIntoView({block:'start', behavior: calm ? 'auto' : 'smooth'});
+});
+$('#photoBtn').addEventListener('click', () => { $('#photo').click(); });
+$('#photo').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; capturePhoto(f); });
+$('#filters').addEventListener('click', e => { const b = e.target.closest('button[data-filter]'); if (!b) return; state.filter = b.dataset.filter; render(); });
+$('#listWrap').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const id = b.dataset.id, act = b.dataset.act;
+  if (act === 'toggle') { state.openId = state.openId === id ? null : id; state.editId = state.confirmId = null; render(); }
+  else if (act === 'done') { state.openId = null; patch(id, {status:'done', doneAt:new Date().toISOString()}); }
+  else if (act === 'reopen') { patch(id, {status:'open', doneAt:null}); }
+  else if (act === 'move') { state.openId = null; patch(id, {bucket:b.dataset.bucket, sortedBy:'manual'}); }
+  else if (act === 'edit') { state.editId = id; state.confirmId = null; render(); const ta = $('#editArea'); if (ta) ta.focus(); }
+  else if (act === 'save') { const ta = $('#editArea'); const t = ta ? ta.value.trim() : ''; state.editId = null; if (t) patch(id, {text:t}); else render(); }
+  else if (act === 'cancel') { state.editId = state.confirmId = null; render(); }
+  else if (act === 'confirm') { state.confirmId = id; render(); }
+  else if (act === 'delete') { state.openId = state.confirmId = null; remove(id); }
+});
+$('#openSettings').addEventListener('click', () => { renderSettings(); $('#sheet').hidden = false; $('#closeSettings').focus(); });
+$('#closeSettings').addEventListener('click', () => { $('#sheet').hidden = true; render(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#sheet').hidden) $('#closeSettings').click(); });
+$('#sheetBody').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const act = b.dataset.act;
+  if (act === 'connect') {
+    const owner = $('#ghOwner').value.trim(), repo = $('#ghRepo').value.trim(), token = $('#ghToken').value.trim();
+    if (!owner || !repo || !token) { $('#connStatus').textContent = 'Fill in all three fields.'; return; }
+    const api = conn && conn.api; conn = {owner:owner, repo:repo, token:token}; if (api) conn.api = api;
+    lsSet(K.conn, conn); meta = {sha:null, etag:null, dirty:true, last:0, inboxEtag:null}; saveMeta();
+    await sync(); renderSettings();
+  }
+  else if (act === 'disconnect') { conn = null; try { localStorage.removeItem(K.conn); } catch(err){} setSync('none'); renderSettings(); }
+  else if (act === 'copyLink') { const ok = await copyText(setupLink(), '#linkText'); if (ok) { $('#connStatus').textContent = 'Lock screen link copied.'; } }
+  else if (act === 'saveKey') { secret = {apiKey:$('#apiKey').value.trim(), rev:Date.now()}; lsSet(K.secret, secret); aiOff = false; secretChecked = 0; scheduleSync(300); renderSettings(); }
+  else if (act === 'export') { const t = $('#ioText'); t.value = exportText(); t.focus(); t.select(); copyText(t.value); }
+  else if (act === 'import') { const t = $('#ioText'); const n = importLines(t.value); t.value = ''; t.placeholder = n ? n + ' notes imported.' : 'Nothing to import. Paste one note per line.'; render(); }
+  else if (act === 'rmBucket') { settings.buckets = settings.buckets.filter(x => x.id !== b.dataset.id); changeSettings(); renderSettings(); }
+  else if (act === 'addBucket') {
+    const inp = $('#newBucket'), label = inp.value.trim(); if (!label) { inp.focus(); return; }
+    if (settings.buckets.some(x => x.label.toLowerCase() === label.toLowerCase())) { inp.focus(); return; }
+    const custom = settings.buckets.filter(x => !DEFAULT_BUCKETS.some(d => d.id === x.id)).length, pal = PALETTE[custom % PALETTE.length];
+    const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 16) || 'bucket';
+    settings.buckets.splice(Math.max(settings.buckets.length - 1, 0), 0, {id:slug + '_' + Math.random().toString(36).slice(2, 6), label:label, hue:pal[0], sat:pal[1], hint:''});
+    changeSettings(); renderSettings();
+  }
+});
+$('#sheetBody').addEventListener('change', e => { if (e.target && e.target.id === 'autoSort') { settings.autoSort = e.target.checked; changeSettings(); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
+window.addEventListener('online', () => { sync(); });
+setInterval(() => { if (!document.hidden) sync(); }, 60000);
+
+/* ---------- start ---------- */
+load();
+function handleLink(){
+  let incoming = '', touched = false;
+  try {
+    const hash = new URLSearchParams(location.hash.replace(/^#/, '')), qs = new URLSearchParams(location.search);
+    const setup = hash.get('setup');
+    if (setup) {
+      const c = JSON.parse(b64d(setup));
+      if (c && c.owner && c.repo && c.token) {
+        const same = conn && conn.owner === c.owner && conn.repo === c.repo && conn.token === c.token;
+        if (!same) { conn = {owner:c.owner, repo:c.repo, token:c.token}; if (c.api) conn.api = c.api; lsSet(K.conn, conn); meta = {sha:null, etag:null, dirty:true, last:0, inboxEtag:null}; saveMeta(); touched = true; }
+      }
+    }
+    incoming = (qs.get('note') || hash.get('note') || '').trim();
+    if (setup || incoming) history.replaceState(null, '', location.pathname);
+  } catch(e){}
+  if (incoming) { const id = newId(); touch(id, {kind:'note', text:incoming.slice(0, 8000), bucket:ruleSort(incoming), sortedBy:'rule', status:'open', createdAt:new Date().toISOString()}); say('Captured.'); smartSort(id); touched = true; }
+  return touched;
+}
+handleLink();
+window.addEventListener('hashchange', () => { if (handleLink()) { render(); sync(); } });
+render(); autosize(); setSync(conn ? 'syncing' : 'none');
+sync();
+if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); }); }
+window.qcSync = sync;
+})();
+</script>
+</body>
+</html>
